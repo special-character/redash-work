@@ -39,11 +39,7 @@ const {
   block,
   not,
   clockRunning,
-  interpolate,
-  diffClamp,
-  Extrapolate,
   spring: reSpring,
-  onChange,
   neq,
   sub,
 } = Animated
@@ -70,6 +66,8 @@ export interface WithSpringParams {
   config?: SpringConfig
   onSnap?: (value: readonly number[]) => void
 }
+
+const textInputRef = React.createRef<TextInput>()
 const springClock = new Clock()
 const manualOpenClock = new Clock()
 const resizeClock = new Clock()
@@ -125,6 +123,24 @@ export const withSpring = (props: WithSpringParams) => {
     set(resizeOffset, springState.position),
     stopClock(springClock),
     set(gestureAndAnimationIsOver, 1),
+    // If the sheet is open, focus the textInput
+    cond(
+      eq(springState.position, SNAP_BOTTOM),
+      [
+        //closed
+        call([springState.position], (position) => {
+          console.log(`CLOSED: ${position}`)
+          Keyboard.dismiss()
+        }),
+      ],
+      [
+        // open
+        call([springState.position], ([position]) => {
+          console.log(`OPEN: ${position}`)
+          textInputRef.current!.focus()
+        }),
+      ],
+    ),
   ]
   const snap = onSnap
     ? [cond(clockRunning(springClock), call([springState.position], onSnap))]
@@ -155,9 +171,7 @@ export const withSpring = (props: WithSpringParams) => {
 }
 
 export default () => {
-  const textInputRef = React.createRef<TextInput>()
   const [value, onChangeText] = React.useState('Useless Placeholder')
-
   // Case 1. Drag gesture to open and close
   const gestureHandler = onGestureEvent({ state, translationY, velocityY })
   const translateY = withSpring({
@@ -204,9 +218,7 @@ export default () => {
             timing({ clock: resizeClock, from: offset, to: resizeOffset }),
           ),
           call([offset, resizeOffset], ([offset, resizeOffset]) => {
-            console.log(
-              `NEQ: transY: ${translationY} offset: ${offset} resizeOffset: ${resizeOffset}`,
-            )
+            console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
           }),
         ]),
         call([offset, resizeOffset], ([offset, resizeOffset]) => {
