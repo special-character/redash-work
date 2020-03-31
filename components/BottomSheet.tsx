@@ -56,17 +56,6 @@ const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
 const keyboardHeight: Animated.Value<number> = new Value(0)
 const textInputHeight: Animated.Value<number> = new Value(0)
 
-Keyboard.addListener('keyboardWillShow', (event) => {
-  console.log('event.coordinates.height', event.endCoordinates.height)
-  keyboardHeight.setValue(event.endCoordinates.height)
-})
-
-Keyboard.addListener('keyboardWillHide', () => {
-  // Set to the offset so it goes back to it's current offset state
-  resizeOffset.setValue(offset)
-  keyboardHeight.setValue(offset)
-})
-
 const config = {
   damping: 15,
   mass: 1,
@@ -192,6 +181,21 @@ export const withSpring = (props: WithSpringParams) => {
 
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
+  const [jsKeyboardHeight, setJSKeyboardHeight] = React.useState(0)
+  React.useEffect(() => {
+    Keyboard.addListener('keyboardWillShow', (event) => {
+      console.log('event.coordinates.height', event.endCoordinates.height)
+      keyboardHeight.setValue(event.endCoordinates.height)
+      setJSKeyboardHeight(event.endCoordinates.height)
+    })
+
+    Keyboard.addListener('keyboardWillHide', () => {
+      // Set to the offset so it goes back to it's current offset state
+      resizeOffset.setValue(offset)
+      keyboardHeight.setValue(offset)
+      setJSKeyboardHeight(SNAP_BOTTOM)
+    })
+  }, [])
   // Case 1. Drag gesture to open and close
   const gestureHandler = onGestureEvent({ state, translationY, velocityY })
   const translateY = withSpring({
@@ -306,24 +310,38 @@ export default () => {
             <Button label="go up" onPress={open} />
             <Button label="go down" onPress={close} />
           </View>
-          <TextInput
-            ref={textInputRef}
-            style={{ height: 40, borderColor: 'gray', borderWidth: 1 }}
-            onChangeText={(text) => onChangeText(text)}
-            value={value}
-            onLayout={(layout) => {
-              if (!layout.nativeEvent.layout.height) return
-              console.log('text input height', layout.nativeEvent.layout.height)
-              textInputHeight.setValue(layout.nativeEvent.layout.height)
-            }}
-          />
-
-          <SegmentedControlIOS
-            values={['One', 'Two']}
-            style={{ height: SEGMENT_CONTROL_HEIGHT }}
-          />
         </Animated.View>
       </PanGestureHandler>
+      <Animated.View
+        style={[
+          { position: 'absolute', bottom: jsKeyboardHeight, left: 0, right: 0 },
+        ]}
+      >
+        <TextInput
+          multiline
+          ref={textInputRef}
+          style={{ borderColor: 'gray', borderWidth: 1 }}
+          onChangeText={(text) => onChangeText(text)}
+          value={value}
+          onContentSizeChange={({
+            nativeEvent: {
+              contentSize: { height },
+            },
+          }) => {
+            console.log('height!', height)
+          }}
+          onLayout={(layout) => {
+            if (!layout.nativeEvent.layout.height) return
+            console.log('text input height', layout.nativeEvent.layout.height)
+            textInputHeight.setValue(layout.nativeEvent.layout.height)
+          }}
+        />
+
+        <SegmentedControlIOS
+          values={['One', 'Two']}
+          style={{ height: SEGMENT_CONTROL_HEIGHT }}
+        />
+      </Animated.View>
     </>
   )
 }
