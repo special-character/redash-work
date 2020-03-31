@@ -193,7 +193,7 @@ export default () => {
       // Set to the offset so it goes back to it's current offset state
       resizeOffset.setValue(offset)
       keyboardHeight.setValue(offset)
-      setJSKeyboardHeight(SNAP_BOTTOM)
+      setJSKeyboardHeight(0)
     })
   }, [])
   // Case 1. Drag gesture to open and close
@@ -269,6 +269,14 @@ export default () => {
   useCode(
     () =>
       block([
+        call(
+          [keyboardHeight, textInputHeight],
+          ([keyboardHeight, textInputHeight]) => {
+            console.log(
+              `keyboardHeight: ${keyboardHeight} textInputHeight: ${textInputHeight}`,
+            )
+          },
+        ),
         set(
           resizeOffset,
           sub(
@@ -323,13 +331,6 @@ export default () => {
           style={{ borderColor: 'gray', borderWidth: 1 }}
           onChangeText={(text) => onChangeText(text)}
           value={value}
-          onContentSizeChange={({
-            nativeEvent: {
-              contentSize: { height },
-            },
-          }) => {
-            console.log('height!', height)
-          }}
           onLayout={(layout) => {
             if (!layout.nativeEvent.layout.height) return
             console.log('text input height', layout.nativeEvent.layout.height)
