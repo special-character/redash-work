@@ -48,40 +48,23 @@ const translationY = new Value(0)
 const velocityY = new Value(0)
 const goUp: Animated.Value<0 | 1> = new Value(0)
 const goDown: Animated.Value<0 | 1> = new Value(0)
+const close = () => goDown.setValue(1)
+const open = () => goUp.setValue(1)
 const state = new Value(State.UNDETERMINED)
 const offset = new Value(SNAP_BOTTOM)
 const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
-const keyboardHeight = new Value(0)
-const textInputHeight = new Value(0)
-
-const updateResizeOffset = ({
-  newTextInputHeight,
-  newKeyboardHeight,
-}: {
-  newTextInputHeight?: number
-  newKeyboardHeight?: number
-}) => {
-  const baseOffset =
-    SEGMENT_CONTROL_HEIGHT + HEADER_HEIGHT + KEYBOARD_AUTOCOMPLETE_HEIGHT
-  if (newTextInputHeight)
-    resizeOffset.setValue(
-      sub(height, add(baseOffset, newTextInputHeight, keyboardHeight)),
-    )
-  if (newKeyboardHeight)
-    resizeOffset.setValue(
-      sub(height, add(baseOffset, newKeyboardHeight, textInputHeight)),
-    )
-}
+const keyboardHeight: Animated.Value<number> = new Value(0)
+const textInputHeight: Animated.Value<number> = new Value(0)
 
 Keyboard.addListener('keyboardWillShow', (event) => {
   console.log('event.coordinates.height', event.endCoordinates.height)
-  updateResizeOffset({ newKeyboardHeight: event.endCoordinates.height })
+  keyboardHeight.setValue(event.endCoordinates.height)
 })
 
 Keyboard.addListener('keyboardWillHide', () => {
   // Set to the offset so it goes back to it's current offset state
   resizeOffset.setValue(offset)
-  updateResizeOffset({ newKeyboardHeight: offset })
+  keyboardHeight.setValue(offset)
 })
 
 const config = {
@@ -277,6 +260,28 @@ export default () => {
     [resizeOffset],
   )
 
+  // Keep the resizeOffset up to date based on the measured heights
+  // This is effectively like a useEffect() where we the block depends on some state (keyboardHeight and textInputHeight)
+  useCode(
+    () =>
+      block([
+        set(
+          resizeOffset,
+          sub(
+            height,
+            add(
+              keyboardHeight,
+              textInputHeight,
+              HEADER_HEIGHT,
+              SEGMENT_CONTROL_HEIGHT,
+              KEYBOARD_AUTOCOMPLETE_HEIGHT,
+            ),
+          ),
+        ),
+      ]),
+    [keyboardHeight, textInputHeight],
+  )
+
   return (
     <>
       <PanGestureHandler {...gestureHandler}>
@@ -298,8 +303,8 @@ export default () => {
                 resizeOffset.setValue(add(resizeOffset, 100))
               }}
             />
-            <Button label="go up" onPress={() => goUp.setValue(1)} />
-            <Button label="go down" onPress={() => goDown.setValue(1)} />
+            <Button label="go up" onPress={open} />
+            <Button label="go down" onPress={close} />
           </View>
           <TextInput
             ref={textInputRef}
@@ -308,10 +313,8 @@ export default () => {
             value={value}
             onLayout={(layout) => {
               if (!layout.nativeEvent.layout.height) return
-              console.log('text input height', textInputHeight)
-              updateResizeOffset({
-                newTextInputHeight: layout.nativeEvent.layout.height,
-              })
+              console.log('text input height', layout.nativeEvent.layout.height)
+              textInputHeight.setValue(layout.nativeEvent.layout.height)
             }}
           />
 
