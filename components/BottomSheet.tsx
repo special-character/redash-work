@@ -48,7 +48,6 @@ const translationY = new Value(0)
 const velocityY = new Value(0)
 const goUp: Animated.Value<0 | 1> = new Value(0)
 const goDown: Animated.Value<0 | 1> = new Value(0)
-const isSheetOpen: Animated.Value<0 | 1> = new Value(0)
 const state = new Value(State.UNDETERMINED)
 const offset = new Value(SNAP_BOTTOM)
 const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
@@ -169,7 +168,6 @@ export const withSpring = (props: WithSpringParams) => {
         call([springState.position], (position) => {
           console.log(`CLOSED: ${position}`)
           Keyboard.dismiss()
-          isSheetOpen.setValue(0)
         }),
       ],
       [
@@ -177,7 +175,6 @@ export const withSpring = (props: WithSpringParams) => {
         call([springState.position], ([position]) => {
           console.log(`OPEN: ${position}`)
           textInputRef.current!.focus()
-          isSheetOpen.setValue(1)
         }),
       ],
     ),
@@ -237,7 +234,6 @@ export default () => {
             call([], () => {
               textInputRef.current!.focus()
               console.log('OPEN MANUAL')
-              isSheetOpen.setValue(1)
             }),
           ]),
         ]),
@@ -251,7 +247,6 @@ export default () => {
             call([], () => {
               Keyboard.dismiss()
               console.log('CLOSED MANUAL')
-              isSheetOpen.setValue(0)
             }),
           ]),
         ]),
@@ -264,9 +259,8 @@ export default () => {
   useCode(
     () =>
       block([
-        // If the sheet is open and gesture is done
-        // Checking if the sheet is open makes sure we don't animate based on content size before the sheet is open
-        cond(and(isSheetOpen, neq(offset, resizeOffset)), [
+        // If the gesture is done and
+        cond(neq(offset, resizeOffset), [
           // If the offset is not back to the snap bottom, animate the offset to the resize offset so we show things where we want them and away from the keyboard
           set(
             offset,
@@ -276,6 +270,9 @@ export default () => {
             console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
           }),
         ]),
+        call([offset, resizeOffset], ([offset, resizeOffset]) => {
+          console.log(`offset: ${offset} resizeOffset: ${resizeOffset}`)
+        }),
       ]),
     [resizeOffset],
   )
