@@ -70,8 +70,9 @@ export interface WithSpringParams {
   config?: SpringConfig
   onSnap?: (value: readonly number[]) => void
 }
-
-const clock = new Clock()
+const springClock = new Clock()
+const manualOpenClock = new Clock()
+const resizeClock = new Clock()
 const translationY = new Value(0)
 const velocityY = new Value(0)
 const goUp: Animated.Value<0 | 1> = new Value(0)
@@ -103,7 +104,7 @@ export const withSpring = (props: WithSpringParams) => {
     restDisplacementThreshold: 0.01,
     ...springConfig,
   }
-  const springClock = new Clock()
+
   const springState: Animated.SpringState = {
     finished: new Value(0),
     velocity: new Value(0),
@@ -117,6 +118,11 @@ export const withSpring = (props: WithSpringParams) => {
   )
   const finishSpring = [
     set(springOffset, springState.position),
+    // If we just finished the spring gesture, don't automatically use the old offset because it could be wrong
+    // In the case that we have resized something and then do another gesture
+    // In that case, case 3 below would also be hit because offset and resizeOffset would be different and we would animate offset to resizeOffset
+    // This would cause offset to always animate to the last thing that was sized
+    set(resizeOffset, springState.position),
     stopClock(springClock),
     set(gestureAndAnimationIsOver, 1),
   ]
@@ -168,12 +174,18 @@ export default () => {
     () =>
       block([
         cond(goUp, [
-          set(offset, timing({ clock, from: offset, to: SNAP_TOP })),
-          cond(not(clockRunning(clock)), [set(goUp, 0)]),
+          set(
+            offset,
+            timing({ clock: manualOpenClock, from: offset, to: SNAP_TOP }),
+          ),
+          cond(not(clockRunning(manualOpenClock)), [set(goUp, 0)]),
         ]),
         cond(goDown, [
-          set(offset, timing({ clock, from: offset, to: SNAP_BOTTOM })),
-          cond(not(clockRunning(clock)), [set(goDown, 0)]),
+          set(
+            offset,
+            timing({ clock: manualOpenClock, from: offset, to: SNAP_BOTTOM }),
+          ),
+          cond(not(clockRunning(manualOpenClock)), [set(goDown, 0)]),
         ]),
       ]),
 
@@ -186,17 +198,11 @@ export default () => {
       block([
         // If the gesture is done and
         cond(neq(offset, resizeOffset), [
-          cond(
-            // If we finished a gesture and the offset is at the bottom
-            and(eq(state, State.END), eq(offset, SNAP_BOTTOM)),
-            // If the offset goes back to the snap bottom, make sure to clear the resizeOffset because we don't want to pop it to the resizeOffset in this case
-            [
-              //set(resizeOffset, offset)
-            ],
-            [],
-          ),
           // If the offset is not back to the snap bottom, animate the offset to the resize offset so we show things where we want them and away from the keyboard
-          set(offset, timing({ clock, from: offset, to: resizeOffset })),
+          set(
+            offset,
+            timing({ clock: resizeClock, from: offset, to: resizeOffset }),
+          ),
           call([offset, resizeOffset], ([offset, resizeOffset]) => {
             console.log(
               `NEQ: transY: ${translationY} offset: ${offset} resizeOffset: ${resizeOffset}`,
