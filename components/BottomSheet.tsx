@@ -79,6 +79,16 @@ const state = new Value(State.UNDETERMINED)
 const offset = new Value(SNAP_BOTTOM)
 const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
 
+Keyboard.addListener('keyboardWillShow', (event) => {
+  console.log('event.coordinates.height', event.endCoordinates.height)
+  resizeOffset.setValue(event.endCoordinates.height)
+})
+
+Keyboard.addListener('keyboardWillHide', () => {
+  // Set to the offset so it goes back to it's current offset state
+  resizeOffset.setValue(offset)
+})
+
 export const withSpring = (props: WithSpringParams) => {
   const {
     value,
