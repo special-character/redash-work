@@ -66,7 +66,7 @@ export interface WithSpringParams {
   velocity: Animated.Adaptable<number>
   state: Animated.Node<State>
   snapPoints: Animated.Adaptable<number>[]
-  offset?: Animated.Value<number>
+  springOffset?: Animated.Value<number>
   config?: SpringConfig
   onSnap?: (value: readonly number[]) => void
 }
@@ -86,11 +86,11 @@ export const withSpring = (props: WithSpringParams) => {
     velocity,
     state,
     snapPoints,
-    offset,
+    springOffset,
     config: springConfig,
     onSnap,
   } = {
-    offset: new Value(0),
+    springOffset: new Value(0),
     ...props,
   }
   const config: PrivateSpringConfig = {
@@ -116,7 +116,7 @@ export const withSpring = (props: WithSpringParams) => {
     clockRunning(springClock),
   )
   const finishSpring = [
-    set(offset, springState.position),
+    set(springOffset, springState.position),
     stopClock(springClock),
     set(gestureAndAnimationIsOver, 1),
   ]
@@ -125,11 +125,11 @@ export const withSpring = (props: WithSpringParams) => {
     : []
   return block([
     cond(isSpringInterrupted, finishSpring),
-    cond(gestureAndAnimationIsOver, set(springState.position, offset)),
+    cond(gestureAndAnimationIsOver, set(springState.position, springOffset)),
     cond(neq(state, State.END), [
       set(gestureAndAnimationIsOver, 0),
       set(springState.finished, 0),
-      set(springState.position, add(offset, value)),
+      set(springState.position, add(springOffset, value)),
     ]),
     cond(and(eq(state, State.END), not(gestureAndAnimationIsOver)), [
       cond(and(not(clockRunning(springClock)), not(springState.finished)), [
@@ -157,7 +157,7 @@ export default () => {
   const translateY = withSpring({
     value: translationY,
     velocity: velocityY,
-    offset,
+    springOffset: offset,
     state,
     snapPoints: [SNAP_TOP, SNAP_BOTTOM],
     config,
@@ -184,10 +184,23 @@ export default () => {
   useCode(
     () =>
       block([
+        // If the gesture is done and
         cond(neq(offset, resizeOffset), [
+          cond(
+            // If we finished a gesture and the offset is at the bottom
+            and(eq(state, State.END), eq(offset, SNAP_BOTTOM)),
+            // If the offset goes back to the snap bottom, make sure to clear the resizeOffset because we don't want to pop it to the resizeOffset in this case
+            [
+              //set(resizeOffset, offset)
+            ],
+            [],
+          ),
+          // If the offset is not back to the snap bottom, animate the offset to the resize offset so we show things where we want them and away from the keyboard
           set(offset, timing({ clock, from: offset, to: resizeOffset })),
           call([offset, resizeOffset], ([offset, resizeOffset]) => {
-            console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
+            console.log(
+              `NEQ: transY: ${translationY} offset: ${offset} resizeOffset: ${resizeOffset}`,
+            )
           }),
         ]),
         call([offset, resizeOffset], ([offset, resizeOffset]) => {
@@ -215,7 +228,7 @@ export default () => {
               label="Decrease resize offset"
               onPress={() => {
                 // Open up by 100 more
-                resizeOffset.setValue(sub(resizeOffset, 100))
+                resizeOffset.setValue(add(resizeOffset, 100))
               }}
             />
             <Button label="go up" onPress={() => goUp.setValue(1)} />
