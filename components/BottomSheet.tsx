@@ -13,7 +13,7 @@ import { onGestureEvent, timing, snapPoint } from 'react-native-redash'
 import Button from './Button'
 
 const { height } = Dimensions.get('window')
-const SNAP_TOP = 400
+const SNAP_TOP = height * 0.25
 const SNAP_BOTTOM = height - 200
 
 const config = {
