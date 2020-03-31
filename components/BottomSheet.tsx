@@ -192,14 +192,26 @@ export default () => {
             offset,
             timing({ clock: manualOpenClock, from: offset, to: SNAP_TOP }),
           ),
-          cond(not(clockRunning(manualOpenClock)), [set(goUp, 0)]),
+          cond(not(clockRunning(manualOpenClock)), [
+            set(goUp, 0),
+            call([], () => {
+              textInputRef.current!.focus()
+              console.log('OPEN MANUAL')
+            }),
+          ]),
         ]),
         cond(goDown, [
           set(
             offset,
             timing({ clock: manualOpenClock, from: offset, to: SNAP_BOTTOM }),
           ),
-          cond(not(clockRunning(manualOpenClock)), [set(goDown, 0)]),
+          cond(not(clockRunning(manualOpenClock)), [
+            set(goDown, 0),
+            call([], () => {
+              Keyboard.dismiss()
+              console.log('CLOSED MANUAL')
+            }),
+          ]),
         ]),
       ]),
 
