@@ -6,24 +6,13 @@ import {
   Text,
   TextInput,
   View,
+  SegmentedControlIOS,
 } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { PanGestureHandler, State } from 'react-native-gesture-handler'
 import { onGestureEvent, timing, snapPoint } from 'react-native-redash'
 import Button from './Button'
 
-const { height } = Dimensions.get('window')
-const SNAP_TOP = height * 0.25
-const SNAP_BOTTOM = height - 200
-
-const config = {
-  damping: 15,
-  mass: 1,
-  stiffness: 100,
-  overshootClamping: false,
-  restSpeedThreshold: 0.1,
-  restDisplacementThreshold: 0.1,
-}
 const {
   and,
   eq,
@@ -43,6 +32,66 @@ const {
   neq,
   sub,
 } = Animated
+
+const { height } = Dimensions.get('window')
+const SNAP_TOP = height * 0.25
+const SNAP_BOTTOM = height - 200
+const SEGMENT_CONTROL_HEIGHT = 40
+const HEADER_HEIGHT = 250
+const KEYBOARD_AUTOCOMPLETE_HEIGHT = 40
+
+const textInputRef = React.createRef<TextInput>()
+const springClock = new Clock()
+const manualOpenClock = new Clock()
+const resizeClock = new Clock()
+const translationY = new Value(0)
+const velocityY = new Value(0)
+const goUp: Animated.Value<0 | 1> = new Value(0)
+const goDown: Animated.Value<0 | 1> = new Value(0)
+const state = new Value(State.UNDETERMINED)
+const offset = new Value(SNAP_BOTTOM)
+const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
+const keyboardHeight = new Value(0)
+const textInputHeight = new Value(0)
+
+const updateResizeOffset = ({
+  newTextInputHeight,
+  newKeyboardHeight,
+}: {
+  newTextInputHeight?: number
+  newKeyboardHeight?: number
+}) => {
+  const baseOffset =
+    SEGMENT_CONTROL_HEIGHT + HEADER_HEIGHT + KEYBOARD_AUTOCOMPLETE_HEIGHT
+  if (newTextInputHeight)
+    resizeOffset.setValue(
+      sub(height, add(baseOffset, newTextInputHeight, keyboardHeight)),
+    )
+  if (newKeyboardHeight)
+    resizeOffset.setValue(
+      sub(height, add(baseOffset, newKeyboardHeight, textInputHeight)),
+    )
+}
+
+Keyboard.addListener('keyboardWillShow', (event) => {
+  console.log('event.coordinates.height', event.endCoordinates.height)
+  updateResizeOffset({ newKeyboardHeight: event.endCoordinates.height })
+})
+
+Keyboard.addListener('keyboardWillHide', () => {
+  // Set to the offset so it goes back to it's current offset state
+  resizeOffset.setValue(offset)
+  updateResizeOffset({ newKeyboardHeight: offset })
+})
+
+const config = {
+  damping: 15,
+  mass: 1,
+  stiffness: 100,
+  overshootClamping: false,
+  restSpeedThreshold: 0.1,
+  restDisplacementThreshold: 0.1,
+}
 
 const styles = StyleSheet.create({
   playerSheet: {
@@ -66,28 +115,6 @@ export interface WithSpringParams {
   config?: SpringConfig
   onSnap?: (value: readonly number[]) => void
 }
-
-const textInputRef = React.createRef<TextInput>()
-const springClock = new Clock()
-const manualOpenClock = new Clock()
-const resizeClock = new Clock()
-const translationY = new Value(0)
-const velocityY = new Value(0)
-const goUp: Animated.Value<0 | 1> = new Value(0)
-const goDown: Animated.Value<0 | 1> = new Value(0)
-const state = new Value(State.UNDETERMINED)
-const offset = new Value(SNAP_BOTTOM)
-const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
-
-Keyboard.addListener('keyboardWillShow', (event) => {
-  console.log('event.coordinates.height', event.endCoordinates.height)
-  resizeOffset.setValue(event.endCoordinates.height)
-})
-
-Keyboard.addListener('keyboardWillHide', () => {
-  // Set to the offset so it goes back to it's current offset state
-  resizeOffset.setValue(offset)
-})
 
 export const withSpring = (props: WithSpringParams) => {
   const {
@@ -256,7 +283,7 @@ export default () => {
         <Animated.View
           style={[styles.playerSheet, { transform: [{ translateY }] }]}
         >
-          <View>
+          <View style={{ height: HEADER_HEIGHT }}>
             <Button
               label="Increase resize offset"
               onPress={() => {
@@ -273,15 +300,25 @@ export default () => {
             />
             <Button label="go up" onPress={() => goUp.setValue(1)} />
             <Button label="go down" onPress={() => goDown.setValue(1)} />
-            <Text style={{ height: 100 }}>Bob</Text>
-
-            <TextInput
-              ref={textInputRef}
-              style={{ height: 40, borderColor: 'gray', borderWidth: 1 }}
-              onChangeText={(text) => onChangeText(text)}
-              value={value}
-            />
           </View>
+          <TextInput
+            ref={textInputRef}
+            style={{ height: 40, borderColor: 'gray', borderWidth: 1 }}
+            onChangeText={(text) => onChangeText(text)}
+            value={value}
+            onLayout={(layout) => {
+              if (!layout.nativeEvent.layout.height) return
+              console.log('text input height', textInputHeight)
+              updateResizeOffset({
+                newTextInputHeight: layout.nativeEvent.layout.height,
+              })
+            }}
+          />
+
+          <SegmentedControlIOS
+            values={['One', 'Two']}
+            style={{ height: SEGMENT_CONTROL_HEIGHT }}
+          />
         </Animated.View>
       </PanGestureHandler>
     </>
