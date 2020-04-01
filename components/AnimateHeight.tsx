@@ -6,7 +6,7 @@ import { Button, View } from 'react-native'
 const { add, block, set, sub, useCode } = Animated
 
 const boxHeight: Animated.Value<number> = new Animated.Value(100)
-const newBoxHeight = new Animated.Value(100)
+const newBoxHeight: Animated.Value<number> = new Animated.Value(100)
 
 export default () => {
   useCode(
