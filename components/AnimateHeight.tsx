@@ -17,7 +17,7 @@ export default () => {
           timing({ from: boxHeight, to: newBoxHeight, duration: 1000 }),
         ),
       ]),
-    [boxHeight, newBoxHeight],
+    [],
   )
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
