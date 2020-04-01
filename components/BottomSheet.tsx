@@ -256,9 +256,14 @@ export default () => {
             offset,
             timing({ clock: resizeClock, from: offset, to: resizeOffset }),
           ),
-          call([offset, resizeOffset], ([offset, resizeOffset]) => {
-            console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
-          }),
+          call(
+            [translationY, offset, resizeOffset],
+            ([translationY, offset, resizeOffset]) => {
+              console.log(
+                `NEQ: transY: ${translationY} offset: ${offset} resizeOffset: ${resizeOffset}`,
+              )
+            },
+          ),
         ]),
         call([offset, resizeOffset], ([offset, resizeOffset]) => {
           console.log(`offset: ${offset} resizeOffset: ${resizeOffset}`)
@@ -274,28 +279,10 @@ export default () => {
       block([
         set(
           resizeOffset,
-          sub(
-            height,
-            add(
-              keyboardHeight,
-              textInputHeight,
-              HEADER_HEIGHT,
-              SEGMENT_CONTROL_HEIGHT,
-            ),
-          ),
+          sub(height, add(keyboardHeight, textInputHeight, HEADER_HEIGHT)),
         ),
       ]),
     [keyboardHeight, textInputHeight],
-  )
-
-  useCode(
-    () =>
-      block([
-        call([textInputHeightTransition], ([textInputHeightTransition]) => {
-          console.log('GOD WHY', textInputHeightTransition)
-        }),
-      ]),
-    [],
   )
 
   return (
@@ -307,14 +294,14 @@ export default () => {
           <View style={{ height }}>
             <View style={{ height: HEADER_HEIGHT, backgroundColor: 'blue' }}>
               <Button
-                title="plus"
+                title="Move up"
                 onPress={() => {
                   // Open up by 100 more
                   resizeOffset.setValue(sub(resizeOffset, 100))
                 }}
               />
               <Button
-                title="minus"
+                title="Move down"
                 onPress={() => {
                   // go down up by 100 more
                   resizeOffset.setValue(add(resizeOffset, 100))
