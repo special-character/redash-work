@@ -187,7 +187,12 @@ export const withSpring = (props: WithSpringParams) => {
 const contentBottomOffset = withTimingTransition(
   sub(
     height,
-    add(translateY, textInputHeight, HEADER_HEIGHT, SEGMENT_CONTROL_HEIGHT),
+    add(
+      keyboardHeight,
+      HEADER_HEIGHT,
+      SEGMENT_CONTROL_HEIGHT,
+      KEYBOARD_AUTOCOMPLETE_HEIGHT,
+    ),
   ),
 )
 export default () => {
