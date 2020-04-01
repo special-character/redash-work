@@ -3,11 +3,11 @@ import { StyleSheet, Text, View } from 'react-native'
 
 import ShowHide from './components/ShowHide'
 import BottomSheet from './components/BottomSheet'
-
+import AnimateHeight from './components/AnimateHeight'
 export default function App() {
   return (
     <View style={styles.container}>
-      <BottomSheet />
+      <AnimateHeight />
     </View>
   )
 }
