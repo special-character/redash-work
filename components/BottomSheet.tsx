@@ -10,7 +10,12 @@ import {
 } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { PanGestureHandler, State } from 'react-native-gesture-handler'
-import { onGestureEvent, timing, snapPoint } from 'react-native-redash'
+import {
+  onGestureEvent,
+  timing,
+  snapPoint,
+  withTimingTransition,
+} from 'react-native-redash'
 import Button from './Button'
 
 const {
@@ -37,7 +42,7 @@ const { height } = Dimensions.get('window')
 const SNAP_TOP = height * 0.25
 const SNAP_BOTTOM = height - 200
 const SEGMENT_CONTROL_HEIGHT = 40
-const HEADER_HEIGHT = 250
+const HEADER_HEIGHT = 100
 const KEYBOARD_AUTOCOMPLETE_HEIGHT = 40
 
 const textInputRef = React.createRef<TextInput>()
@@ -179,6 +184,12 @@ export const withSpring = (props: WithSpringParams) => {
   ])
 }
 
+const contentBottomOffset = withTimingTransition(
+  sub(
+    height,
+    add(translateY, textInputHeight, HEADER_HEIGHT, SEGMENT_CONTROL_HEIGHT),
+  ),
+)
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
   const [jsKeyboardHeight, setJSKeyboardHeight] = React.useState(0)
@@ -301,20 +312,6 @@ export default () => {
           style={[styles.playerSheet, { transform: [{ translateY }] }]}
         >
           <View style={{ height: HEADER_HEIGHT }}>
-            <Button
-              label="Increase resize offset"
-              onPress={() => {
-                // Open up by 100 more
-                resizeOffset.setValue(sub(resizeOffset, 100))
-              }}
-            />
-            <Button
-              label="Decrease resize offset"
-              onPress={() => {
-                // Open up by 100 more
-                resizeOffset.setValue(add(resizeOffset, 100))
-              }}
-            />
             <Button label="go up" onPress={open} />
             <Button label="go down" onPress={close} />
           </View>
@@ -322,7 +319,12 @@ export default () => {
       </PanGestureHandler>
       <Animated.View
         style={[
-          { position: 'absolute', bottom: jsKeyboardHeight, left: 0, right: 0 },
+          {
+            position: 'absolute',
+            bottom: contentBottomOffset,
+            left: 0,
+            right: 0,
+          },
         ]}
       >
         <TextInput

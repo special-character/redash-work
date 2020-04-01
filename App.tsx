@@ -16,7 +16,7 @@ import UseTimingTransition from './components/UseTimingTransition'
 export default function App() {
   return (
     <View style={styles.container}>
-      <UseTimingTransition />
+      <BottomSheet />
     </View>
   )
 }
