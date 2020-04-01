@@ -3,10 +3,10 @@ import {
   Dimensions,
   Keyboard,
   StyleSheet,
-  Text,
   TextInput,
   View,
   SegmentedControlIOS,
+  ScrollView,
 } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { PanGestureHandler, State } from 'react-native-gesture-handler'
@@ -184,17 +184,8 @@ export const withSpring = (props: WithSpringParams) => {
   ])
 }
 
-const contentBottomOffset = withTimingTransition(
-  sub(
-    height,
-    add(
-      keyboardHeight,
-      HEADER_HEIGHT,
-      SEGMENT_CONTROL_HEIGHT,
-      KEYBOARD_AUTOCOMPLETE_HEIGHT,
-    ),
-  ),
-)
+const textInputHeightTransition = withTimingTransition(textInputHeight)
+
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
   const [jsKeyboardHeight, setJSKeyboardHeight] = React.useState(0)
@@ -320,36 +311,37 @@ export default () => {
             <Button label="go up" onPress={open} />
             <Button label="go down" onPress={close} />
           </View>
+
+          <Animated.View
+            style={{
+              height: textInputHeightTransition,
+              justifyContent: 'flex-end',
+            }}
+          >
+            <ScrollView scrollEnabled={false} style={{ flexShrink: 0 }}>
+              <TextInput
+                multiline
+                ref={textInputRef}
+                style={{ borderColor: 'gray', borderWidth: 1 }}
+                onChangeText={(text) => onChangeText(text)}
+                value={value}
+                onLayout={(layout) => {
+                  if (!layout.nativeEvent.layout.height) return
+                  console.log(
+                    'text input height',
+                    layout.nativeEvent.layout.height,
+                  )
+                  textInputHeight.setValue(layout.nativeEvent.layout.height)
+                }}
+              />
+            </ScrollView>
+            <SegmentedControlIOS
+              values={['One', 'Two']}
+              style={{ height: SEGMENT_CONTROL_HEIGHT }}
+            />
+          </Animated.View>
         </Animated.View>
       </PanGestureHandler>
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            bottom: contentBottomOffset,
-            left: 0,
-            right: 0,
-          },
-        ]}
-      >
-        <TextInput
-          multiline
-          ref={textInputRef}
-          style={{ borderColor: 'gray', borderWidth: 1 }}
-          onChangeText={(text) => onChangeText(text)}
-          value={value}
-          onLayout={(layout) => {
-            if (!layout.nativeEvent.layout.height) return
-            console.log('text input height', layout.nativeEvent.layout.height)
-            textInputHeight.setValue(layout.nativeEvent.layout.height)
-          }}
-        />
-
-        <SegmentedControlIOS
-          values={['One', 'Two']}
-          style={{ height: SEGMENT_CONTROL_HEIGHT }}
-        />
-      </Animated.View>
     </>
   )
 }
