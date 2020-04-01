@@ -42,8 +42,7 @@ const { height } = Dimensions.get('window')
 const SNAP_TOP = height * 0.25
 const SNAP_BOTTOM = height - 200
 const SEGMENT_CONTROL_HEIGHT = 40
-const HEADER_HEIGHT = 100
-const KEYBOARD_AUTOCOMPLETE_HEIGHT = 40
+const HEADER_HEIGHT = 200
 
 const textInputRef = React.createRef<TextInput>()
 const springClock = new Clock()
@@ -286,16 +285,7 @@ export default () => {
         ),
         set(
           resizeOffset,
-          sub(
-            height,
-            add(
-              keyboardHeight,
-              textInputHeight,
-              HEADER_HEIGHT,
-              SEGMENT_CONTROL_HEIGHT,
-              KEYBOARD_AUTOCOMPLETE_HEIGHT,
-            ),
-          ),
+          sub(height, add(keyboardHeight, textInputHeight, HEADER_HEIGHT)),
         ),
       ]),
     [keyboardHeight, textInputHeight],
