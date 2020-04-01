@@ -5,16 +5,10 @@ import {
   StyleSheet,
   TextInput,
   View,
-  SegmentedControlIOS,
-  ScrollView,
   Button,
 } from 'react-native'
 import Animated from 'react-native-reanimated'
-import {
-  PanGestureHandler,
-  State,
-  TouchableHighlight,
-} from 'react-native-gesture-handler'
+import { PanGestureHandler, State } from 'react-native-gesture-handler'
 import {
   onGestureEvent,
   timing,
@@ -46,7 +40,7 @@ const { height } = Dimensions.get('window')
 const SNAP_TOP = height * 0.25
 const SNAP_BOTTOM = height - 200
 const SEGMENT_CONTROL_HEIGHT = 40
-const HEADER_HEIGHT = 100
+const HEADER_HEIGHT = 150
 console.log('SNAP_BOTTOM', SNAP_BOTTOM)
 const textInputRef = React.createRef<TextInput>()
 const springClock = new Clock()
@@ -63,6 +57,16 @@ const offset = new Value(SNAP_BOTTOM)
 const resizeOffset: Animated.Value<number> = new Value(SNAP_BOTTOM)
 const keyboardHeight: Animated.Value<number> = new Value(0)
 const textInputHeight: Animated.Value<number> = new Value(0)
+
+Keyboard.addListener('keyboardWillShow', (event) => {
+  keyboardHeight.setValue(event.endCoordinates.height)
+})
+
+Keyboard.addListener('keyboardWillHide', () => {
+  // Set to the offset so it goes back to it's current offset state
+  resizeOffset.setValue(offset)
+  keyboardHeight.setValue(offset)
+})
 
 const config = {
   damping: 15,
@@ -138,9 +142,6 @@ export const withSpring = (props: WithSpringParams) => {
     // In that case, case 3 below would also be hit because offset and resizeOffset would be different and we would animate offset to resizeOffset
     // This would cause offset to always animate to the last thing that was sized
     set(resizeOffset, springState.position),
-    call([resizeOffset], ([resizeOffsetDone]) => {
-      console.log('resizeOffsetDONE!!!', resizeOffsetDone)
-    }),
     stopClock(springClock),
     set(gestureAndAnimationIsOver, 1),
     // If the sheet is open, focus the textInput
@@ -195,19 +196,9 @@ const textInputHeightTransition = withTimingTransition(textInputHeight)
 let textInputWithPadding = 0
 let textInputWithoutPadding = 0
 let textInputPadding = 0
+let manualTextInputHeight = 0
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
-  React.useEffect(() => {
-    Keyboard.addListener('keyboardWillShow', (event) => {
-      keyboardHeight.setValue(event.endCoordinates.height)
-    })
-
-    Keyboard.addListener('keyboardWillHide', () => {
-      // Set to the offset so it goes back to it's current offset state
-      resizeOffset.setValue(offset)
-      keyboardHeight.setValue(0)
-    })
-  }, [])
   // Case 1. Drag gesture to open and close
   const gestureHandler = onGestureEvent({ state, translationY, velocityY })
   const translateY = withSpring({
@@ -226,12 +217,7 @@ export default () => {
         cond(goUp, [
           set(
             offset,
-            timing({
-              clock: manualOpenClock,
-              from: offset,
-              to: SNAP_TOP,
-              duration: 3000,
-            }),
+            timing({ clock: manualOpenClock, from: offset, to: SNAP_TOP }),
           ),
           cond(not(clockRunning(manualOpenClock)), [
             set(goUp, 0),
@@ -244,12 +230,7 @@ export default () => {
         cond(goDown, [
           set(
             offset,
-            timing({
-              clock: manualOpenClock,
-              from: offset,
-              to: SNAP_BOTTOM,
-              duration: 3000,
-            }),
+            timing({ clock: manualOpenClock, from: offset, to: SNAP_BOTTOM }),
           ),
           cond(not(clockRunning(manualOpenClock)), [
             set(goDown, 0),
@@ -273,22 +254,15 @@ export default () => {
           // If the offset is not back to the snap bottom, animate the offset to the resize offset so we show things where we want them and away from the keyboard
           set(
             offset,
-            timing({
-              clock: resizeClock,
-              from: offset,
-              to: resizeOffset,
-              duration: 3000,
-            }),
+            timing({ clock: resizeClock, from: offset, to: resizeOffset }),
           ),
-          call(
-            [offset, resizeOffset, keyboardHeight],
-            ([offset, resizeOffset, keyboardHeight]) => {
-              console.log(
-                `NEQ: offset: ${offset} resizeOffset: ${resizeOffset} keyboardHeight: ${keyboardHeight}`,
-              )
-            },
-          ),
+          call([offset, resizeOffset], ([offset, resizeOffset]) => {
+            console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
+          }),
         ]),
+        call([offset, resizeOffset], ([offset, resizeOffset]) => {
+          console.log(`offset: ${offset} resizeOffset: ${resizeOffset}`)
+        }),
       ]),
     [resizeOffset],
   )
@@ -312,6 +286,16 @@ export default () => {
         ),
       ]),
     [keyboardHeight, textInputHeight],
+  )
+
+  useCode(
+    () =>
+      block([
+        call([textInputHeightTransition], ([textInputHeightTransition]) => {
+          console.log('GOD WHY', textInputHeightTransition)
+        }),
+      ]),
+    [],
   )
 
   return (
@@ -368,9 +352,21 @@ export default () => {
                     textInputPadding =
                       textInputWithPadding - textInputWithoutPadding
 
-                  textInputHeight.setValue(
-                    height + textInputPadding + SEGMENT_CONTROL_HEIGHT,
-                  )
+                  console.log('WHY YOU FUCK ME')
+
+                  if (
+                    manualTextInputHeight !==
+                    height + textInputPadding + SEGMENT_CONTROL_HEIGHT
+                  ) {
+                    console.log(
+                      'FUCK ME',
+                      manualTextInputHeight,
+                      height + textInputPadding + SEGMENT_CONTROL_HEIGHT,
+                    )
+                    manualTextInputHeight =
+                      height + textInputPadding + SEGMENT_CONTROL_HEIGHT
+                    textInputHeight.setValue(manualTextInputHeight)
+                  }
                 }}
                 onLayout={(layout) => {
                   if (!layout.nativeEvent.layout.height) return
