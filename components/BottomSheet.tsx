@@ -7,16 +7,20 @@ import {
   View,
   SegmentedControlIOS,
   ScrollView,
+  Button,
 } from 'react-native'
 import Animated from 'react-native-reanimated'
-import { PanGestureHandler, State } from 'react-native-gesture-handler'
+import {
+  PanGestureHandler,
+  State,
+  TouchableHighlight,
+} from 'react-native-gesture-handler'
 import {
   onGestureEvent,
   timing,
   snapPoint,
   withTimingTransition,
 } from 'react-native-redash'
-import Button from './Button'
 
 const {
   and,
@@ -42,7 +46,7 @@ const { height } = Dimensions.get('window')
 const SNAP_TOP = height * 0.25
 const SNAP_BOTTOM = height - 200
 const SEGMENT_CONTROL_HEIGHT = 40
-const HEADER_HEIGHT = 200
+const HEADER_HEIGHT = 100
 
 const textInputRef = React.createRef<TextInput>()
 const springClock = new Clock()
@@ -134,6 +138,9 @@ export const withSpring = (props: WithSpringParams) => {
     // In that case, case 3 below would also be hit because offset and resizeOffset would be different and we would animate offset to resizeOffset
     // This would cause offset to always animate to the last thing that was sized
     set(resizeOffset, springState.position),
+    call([resizeOffset], ([resizeOffsetDone]) => {
+      console.log('resizeOffsetDONE!!!', resizeOffsetDone)
+    }),
     stopClock(springClock),
     set(gestureAndAnimationIsOver, 1),
     // If the sheet is open, focus the textInput
@@ -185,7 +192,9 @@ export const withSpring = (props: WithSpringParams) => {
 
 // Animates smoothly b/c the textInputHeight changes at the same time as the offset that controls the sheet position
 const textInputHeightTransition = withTimingTransition(textInputHeight)
-
+let textInputHeightInitialOffset = 0
+let textInputContentInitialOffset = 0
+let textInputPadding = 0
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
   React.useEffect(() => {
@@ -255,15 +264,17 @@ export default () => {
           // If the offset is not back to the snap bottom, animate the offset to the resize offset so we show things where we want them and away from the keyboard
           set(
             offset,
-            timing({ clock: resizeClock, from: offset, to: resizeOffset }),
+            timing({
+              clock: resizeClock,
+              from: offset,
+              to: resizeOffset,
+              duration: 25,
+            }),
           ),
           call([offset, resizeOffset], ([offset, resizeOffset]) => {
             console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
           }),
         ]),
-        call([offset, resizeOffset], ([offset, resizeOffset]) => {
-          console.log(`offset: ${offset} resizeOffset: ${resizeOffset}`)
-        }),
       ]),
     [resizeOffset],
   )
@@ -276,14 +287,26 @@ export default () => {
         call(
           [keyboardHeight, textInputHeight],
           ([keyboardHeight, textInputHeight]) => {
+            const resizeOffsetCalc =
+              height - (keyboardHeight + textInputHeight + HEADER_HEIGHT)
+            /*
             console.log(
-              `keyboardHeight: ${keyboardHeight} textInputHeight: ${textInputHeight}`,
+              `h: ${height} keyboardHeight: ${keyboardHeight} textInputHeight: ${textInputHeight} header: ${HEADER_HEIGHT} calc: ${resizeOffsetCalc}`,
             )
+            */
           },
         ),
         set(
           resizeOffset,
-          sub(height, add(keyboardHeight, textInputHeight, HEADER_HEIGHT)),
+          sub(
+            height,
+            add(
+              keyboardHeight,
+              textInputHeight,
+              HEADER_HEIGHT,
+              SEGMENT_CONTROL_HEIGHT,
+            ),
+          ),
         ),
       ]),
     [keyboardHeight, textInputHeight],
@@ -295,39 +318,69 @@ export default () => {
         <Animated.View
           style={[styles.playerSheet, { transform: [{ translateY }] }]}
         >
-          <View style={{ height: HEADER_HEIGHT }}>
-            <Button label="go up" onPress={open} />
-            <Button label="go down" onPress={close} />
-          </View>
+          <View style={{ height }}>
+            <View
+              style={{ height: HEADER_HEIGHT, backgroundColor: 'blue' }}
+            ></View>
 
-          <Animated.View
-            style={{
-              height: textInputHeightTransition,
-              justifyContent: 'flex-end',
-            }}
-          >
-            <ScrollView scrollEnabled={false} style={{ flexShrink: 0 }}>
+            <Animated.View
+              style={{
+                backgroundColor: 'red',
+                flexDirection: 'column',
+                height: textInputHeightTransition,
+                justifyContent: 'flex-end',
+                overflow: 'hidden',
+              }}
+            >
               <TextInput
                 multiline
                 ref={textInputRef}
                 style={{ borderColor: 'gray', borderWidth: 1 }}
                 onChangeText={(text) => onChangeText(text)}
                 value={value}
+                onContentSizeChange={({
+                  nativeEvent: {
+                    contentSize: { width, height },
+                  },
+                }) => {
+                  if (textInputContentInitialOffset === 0) {
+                    textInputContentInitialOffset = height
+                  }
+
+                  if (
+                    textInputHeightInitialOffset !== 0 &&
+                    textInputPadding === 0
+                  ) {
+                    textInputPadding =
+                      textInputHeightInitialOffset -
+                      textInputContentInitialOffset
+                  }
+
+                  console.log('~~~HEIGHT', height, 'padding', textInputPadding)
+                  textInputHeight.setValue(
+                    height + textInputPadding + SEGMENT_CONTROL_HEIGHT,
+                  )
+                }}
                 onLayout={(layout) => {
                   if (!layout.nativeEvent.layout.height) return
                   console.log(
-                    'text input height',
+                    'text input height@@@',
                     layout.nativeEvent.layout.height,
                   )
-                  textInputHeight.setValue(layout.nativeEvent.layout.height)
+                  if (textInputHeightInitialOffset === 0)
+                    textInputHeightInitialOffset =
+                      layout.nativeEvent.layout.height
                 }}
               />
-            </ScrollView>
-            <SegmentedControlIOS
-              values={['One', 'Two']}
-              style={{ height: SEGMENT_CONTROL_HEIGHT }}
-            />
-          </Animated.View>
+
+              <View
+                style={{
+                  backgroundColor: 'orange',
+                  height: SEGMENT_CONTROL_HEIGHT,
+                }}
+              />
+            </Animated.View>
+          </View>
         </Animated.View>
       </PanGestureHandler>
     </>
