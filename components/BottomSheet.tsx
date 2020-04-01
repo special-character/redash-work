@@ -64,8 +64,7 @@ Keyboard.addListener('keyboardWillShow', (event) => {
 
 Keyboard.addListener('keyboardWillHide', () => {
   // Set to the offset so it goes back to it's current offset state
-  resizeOffset.setValue(offset)
-  keyboardHeight.setValue(offset)
+  keyboardHeight.setValue(0)
 })
 
 const config = {
@@ -217,7 +216,7 @@ export default () => {
         cond(goUp, [
           set(
             offset,
-            timing({ clock: manualOpenClock, from: offset, to: SNAP_TOP }),
+            timing({ clock: manualOpenClock, from: offset, to: resizeOffset }),
           ),
           cond(not(clockRunning(manualOpenClock)), [
             set(goUp, 0),
@@ -230,7 +229,7 @@ export default () => {
         cond(goDown, [
           set(
             offset,
-            timing({ clock: manualOpenClock, from: offset, to: SNAP_BOTTOM }),
+            timing({ clock: manualOpenClock, from: offset, to: resizeOffset }),
           ),
           cond(not(clockRunning(manualOpenClock)), [
             set(goDown, 0),
