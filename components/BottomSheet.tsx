@@ -183,23 +183,21 @@ export const withSpring = (props: WithSpringParams) => {
   ])
 }
 
+// Animates smoothly b/c the textInputHeight changes at the same time as the offset that controls the sheet position
 const textInputHeightTransition = withTimingTransition(textInputHeight)
 
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
-  const [jsKeyboardHeight, setJSKeyboardHeight] = React.useState(0)
   React.useEffect(() => {
     Keyboard.addListener('keyboardWillShow', (event) => {
       console.log('event.coordinates.height', event.endCoordinates.height)
       keyboardHeight.setValue(event.endCoordinates.height)
-      setJSKeyboardHeight(event.endCoordinates.height)
     })
 
     Keyboard.addListener('keyboardWillHide', () => {
       // Set to the offset so it goes back to it's current offset state
       resizeOffset.setValue(offset)
       keyboardHeight.setValue(offset)
-      setJSKeyboardHeight(0)
     })
   }, [])
   // Case 1. Drag gesture to open and close
