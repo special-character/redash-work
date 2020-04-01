@@ -47,7 +47,7 @@ const SNAP_TOP = height * 0.25
 const SNAP_BOTTOM = height - 200
 const SEGMENT_CONTROL_HEIGHT = 40
 const HEADER_HEIGHT = 100
-
+console.log('SNAP_BOTTOM', SNAP_BOTTOM)
 const textInputRef = React.createRef<TextInput>()
 const springClock = new Clock()
 const manualOpenClock = new Clock()
@@ -192,21 +192,20 @@ export const withSpring = (props: WithSpringParams) => {
 
 // Animates smoothly b/c the textInputHeight changes at the same time as the offset that controls the sheet position
 const textInputHeightTransition = withTimingTransition(textInputHeight)
-let textInputHeightInitialOffset = 0
-let textInputContentInitialOffset = 0
+let textInputWithPadding = 0
+let textInputWithoutPadding = 0
 let textInputPadding = 0
 export default () => {
   const [value, onChangeText] = React.useState('Useless Placeholder')
   React.useEffect(() => {
     Keyboard.addListener('keyboardWillShow', (event) => {
-      console.log('event.coordinates.height', event.endCoordinates.height)
       keyboardHeight.setValue(event.endCoordinates.height)
     })
 
     Keyboard.addListener('keyboardWillHide', () => {
       // Set to the offset so it goes back to it's current offset state
       resizeOffset.setValue(offset)
-      keyboardHeight.setValue(offset)
+      keyboardHeight.setValue(0)
     })
   }, [])
   // Case 1. Drag gesture to open and close
@@ -227,7 +226,12 @@ export default () => {
         cond(goUp, [
           set(
             offset,
-            timing({ clock: manualOpenClock, from: offset, to: SNAP_TOP }),
+            timing({
+              clock: manualOpenClock,
+              from: offset,
+              to: SNAP_TOP,
+              duration: 3000,
+            }),
           ),
           cond(not(clockRunning(manualOpenClock)), [
             set(goUp, 0),
@@ -240,7 +244,12 @@ export default () => {
         cond(goDown, [
           set(
             offset,
-            timing({ clock: manualOpenClock, from: offset, to: SNAP_BOTTOM }),
+            timing({
+              clock: manualOpenClock,
+              from: offset,
+              to: SNAP_BOTTOM,
+              duration: 3000,
+            }),
           ),
           cond(not(clockRunning(manualOpenClock)), [
             set(goDown, 0),
@@ -268,12 +277,17 @@ export default () => {
               clock: resizeClock,
               from: offset,
               to: resizeOffset,
-              duration: 25,
+              duration: 3000,
             }),
           ),
-          call([offset, resizeOffset], ([offset, resizeOffset]) => {
-            console.log(`NEQ: offset: ${offset} resizeOffset: ${resizeOffset}`)
-          }),
+          call(
+            [offset, resizeOffset, keyboardHeight],
+            ([offset, resizeOffset, keyboardHeight]) => {
+              console.log(
+                `NEQ: offset: ${offset} resizeOffset: ${resizeOffset} keyboardHeight: ${keyboardHeight}`,
+              )
+            },
+          ),
         ]),
       ]),
     [resizeOffset],
@@ -284,18 +298,6 @@ export default () => {
   useCode(
     () =>
       block([
-        call(
-          [keyboardHeight, textInputHeight],
-          ([keyboardHeight, textInputHeight]) => {
-            const resizeOffsetCalc =
-              height - (keyboardHeight + textInputHeight + HEADER_HEIGHT)
-            /*
-            console.log(
-              `h: ${height} keyboardHeight: ${keyboardHeight} textInputHeight: ${textInputHeight} header: ${HEADER_HEIGHT} calc: ${resizeOffsetCalc}`,
-            )
-            */
-          },
-        ),
         set(
           resizeOffset,
           sub(
@@ -319,15 +321,31 @@ export default () => {
           style={[styles.playerSheet, { transform: [{ translateY }] }]}
         >
           <View style={{ height }}>
-            <View
-              style={{ height: HEADER_HEIGHT, backgroundColor: 'blue' }}
-            ></View>
+            <View style={{ height: HEADER_HEIGHT, backgroundColor: 'blue' }}>
+              <Button
+                title="plus"
+                onPress={() => {
+                  // Open up by 100 more
+                  resizeOffset.setValue(sub(resizeOffset, 100))
+                }}
+              />
+              <Button
+                title="minus"
+                onPress={() => {
+                  // go down up by 100 more
+                  resizeOffset.setValue(add(resizeOffset, 100))
+                }}
+              />
+              <Button title="open" onPress={open} />
+              <Button title="close" onPress={close} />
+            </View>
 
             <Animated.View
               style={{
                 backgroundColor: 'red',
                 flexDirection: 'column',
                 height: textInputHeightTransition,
+                // Because we have flex-end
                 justifyContent: 'flex-end',
                 overflow: 'hidden',
               }}
@@ -340,36 +358,24 @@ export default () => {
                 value={value}
                 onContentSizeChange={({
                   nativeEvent: {
-                    contentSize: { width, height },
+                    contentSize: { height },
                   },
                 }) => {
-                  if (textInputContentInitialOffset === 0) {
-                    textInputContentInitialOffset = height
-                  }
+                  if (textInputWithoutPadding === 0)
+                    textInputWithoutPadding = height
 
-                  if (
-                    textInputHeightInitialOffset !== 0 &&
-                    textInputPadding === 0
-                  ) {
+                  if (textInputWithPadding !== 0 && textInputPadding === 0)
                     textInputPadding =
-                      textInputHeightInitialOffset -
-                      textInputContentInitialOffset
-                  }
+                      textInputWithPadding - textInputWithoutPadding
 
-                  console.log('~~~HEIGHT', height, 'padding', textInputPadding)
                   textInputHeight.setValue(
                     height + textInputPadding + SEGMENT_CONTROL_HEIGHT,
                   )
                 }}
                 onLayout={(layout) => {
                   if (!layout.nativeEvent.layout.height) return
-                  console.log(
-                    'text input height@@@',
-                    layout.nativeEvent.layout.height,
-                  )
-                  if (textInputHeightInitialOffset === 0)
-                    textInputHeightInitialOffset =
-                      layout.nativeEvent.layout.height
+                  if (textInputWithPadding === 0)
+                    textInputWithPadding = layout.nativeEvent.layout.height
                 }}
               />
 
